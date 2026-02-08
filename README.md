@@ -2,6 +2,15 @@
 
 Aplikasi chat sederhana berbasis Windows Forms yang terintegrasi dengan AI melalui OpenRouter API.
 
+## Informasi Mahasiswa
+
+| | |
+|---|---|
+| **Nama** | Dimar Hanung Prakoso |
+| **NIM** | 250401010038 |
+| **Kelas** | IF103 |
+| **Mata Kuliah** | Pemrograman Visual |
+
 ## Deskripsi
 
 SimpleChatUI adalah aplikasi desktop yang memungkinkan pengguna untuk berkomunikasi dengan model AI (Google Gemini) melalui antarmuka chat yang intuitif. Aplikasi ini mendukung pengiriman pesan teks, upload file teks, dan upload gambar untuk analisis multimodal.
@@ -81,4 +90,4 @@ Proyek ini dibuat untuk keperluan UAS Pemrograman Visual.
 
 ## Kontributor
 
-- [Nama Anda]
+- **Dimar Hanung Prakoso** (250401010038)
