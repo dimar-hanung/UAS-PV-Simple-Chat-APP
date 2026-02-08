@@ -14,6 +14,7 @@ Public Class Form1
     Private ReadOnly configFilePath As String = Path.Combine(Application.StartupPath, "config.txt")
     Private currentAiResponse As New StringBuilder()
     Private isFirstStreamChunk As Boolean = True
+    Private streamStartPosition As Integer = 0 ' Track where AI response starts
 
     ' Supported file extensions
     Private ReadOnly imageExtensions As String() = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
@@ -269,9 +270,10 @@ Public Class Form1
         ' Disable controls during API call
         SetControlsEnabled(False)
 
-        ' Reset AI response buffer
+        ' Reset AI response buffer and tracking
         currentAiResponse.Clear()
         isFirstStreamChunk = True
+        streamStartPosition = 0
 
         ' Call OpenRouter API
         Await CallOpenRouter(apiKey, message, uploadedFileContent, uploadedImageBase64, uploadedImageMimeType)
@@ -351,8 +353,8 @@ Public Class Form1
                             End Using
                         End Using
 
-                        ' Final scroll to end after streaming completes
-                        Me.Invoke(Sub() ScrollToEnd())
+                        ' Re-render the complete response with markdown formatting
+                        Me.Invoke(Sub() RenderMarkdownAfterStream())
                     Else
                         ' Branching: Show error for non-success status
                         Dim errorContent = Await response.Content.ReadAsStringAsync()
@@ -374,8 +376,6 @@ Public Class Form1
             Dim jsonData = line.Substring(6).Trim()
 
             If jsonData = "[DONE]" Then
-                ' Add newline at the end of response
-                Me.Invoke(Sub() AppendFormattedText(vbCrLf, Color.Black, FontStyle.Regular))
                 Return
             End If
 
@@ -411,8 +411,9 @@ Public Class Form1
     ''' Helper: Append streaming text to display in real-time
     ''' </summary>
     Private Sub AppendStreamingText(text As String)
-        ' Add "AI: " label before first chunk
+        ' Add "AI: " label before first chunk and track position
         If isFirstStreamChunk Then
+            streamStartPosition = rtbChatDisplay.TextLength
             AppendFormattedText("AI: ", Color.Green, FontStyle.Bold)
             isFirstStreamChunk = False
         End If
@@ -420,6 +421,27 @@ Public Class Form1
         ' Append the text chunk directly (without markdown parsing for speed)
         AppendFormattedText(text, Color.Black, FontStyle.Regular)
         ScrollToEnd()
+    End Sub
+
+    ''' <summary>
+    ''' Helper: Re-render AI response with markdown after streaming completes
+    ''' </summary>
+    Private Sub RenderMarkdownAfterStream()
+        ' Temporarily allow editing to remove text
+        rtbChatDisplay.ReadOnly = False
+
+        ' Remove the streamed plain text (including "AI: " label)
+        Dim length = rtbChatDisplay.TextLength - streamStartPosition
+        If length > 0 Then
+            rtbChatDisplay.Select(streamStartPosition, length)
+            rtbChatDisplay.Cut()
+        End If
+
+        ' Restore read-only
+        rtbChatDisplay.ReadOnly = True
+
+        ' Re-render with markdown formatting (includes "AI: " label)
+        RenderMarkdownInternal(currentAiResponse.ToString())
     End Sub
 
     ''' <summary>
@@ -438,6 +460,17 @@ Public Class Form1
         ' Add "AI: " label
         AppendFormattedText("AI: ", Color.Green, FontStyle.Bold)
 
+        ' Render the markdown content
+        RenderMarkdownContent(markdownText)
+
+        AppendFormattedText(vbCrLf, Color.Black, FontStyle.Regular)
+        ScrollToEnd()
+    End Sub
+
+    ''' <summary>
+    ''' Helper: Render markdown content without label
+    ''' </summary>
+    Private Sub RenderMarkdownContent(markdownText As String)
         Dim lines = markdownText.Split({vbCrLf, vbLf}, StringSplitOptions.None)
         Dim inCodeBlock As Boolean = False
         Dim codeBlockContent As New StringBuilder()
@@ -471,9 +504,6 @@ Public Class Form1
         If inCodeBlock Then
             RenderCodeBlock(codeBlockContent.ToString(), codeBlockLang)
         End If
-
-        AppendFormattedText(vbCrLf, Color.Black, FontStyle.Regular)
-        ScrollToEnd()
     End Sub
 
     ''' <summary>
